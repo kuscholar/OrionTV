@@ -1,3 +1,5 @@
+import TVHome from "@/components/tv/TVHome";
+import { Platform as TVPlatform } from "react-native";
 import React, { useEffect, useCallback, useRef, useState } from "react";
 import { View, StyleSheet, ActivityIndicator, FlatList, Pressable, Animated, StatusBar, Platform, BackHandler, ToastAndroid } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +21,9 @@ import { Colors } from "@/constants/Colors";
 
 const LOAD_MORE_THRESHOLD = 200;
 
-export default function HomeScreen() {
+export default function HomeScreen() { return TVPlatform.isTV ? <TVHome /> : <OriginalHomeScreen />; }
+
+function OriginalHomeScreen() {
   const router = useRouter();
   const colorScheme = "dark";
   const [selectedTag, setSelectedTag] = useState<string | null>(null);

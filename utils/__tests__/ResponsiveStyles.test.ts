@@ -34,10 +34,12 @@ describe("ResponsiveStyles", () => {
   const mockConfig: ResponsiveConfig = {
     deviceType: "mobile",
     spacing: 16,
-    safeAreaInsets: { top: 0, bottom: 0, left: 0, right: 0 },
-    windowWidth: 375,
-    windowHeight: 812,
-    isLandscape: false,
+    columns: 3,
+    cardWidth: 100,
+    cardHeight: 120,
+    screenWidth: 375,
+    screenHeight: 812,
+    isPortrait: true,
   };
 
   beforeEach(() => {

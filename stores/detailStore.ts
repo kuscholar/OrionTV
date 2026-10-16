@@ -21,7 +21,7 @@ interface DetailState {
   isFavorited: boolean;
   failedSources: Set<string>; // 记录失败的source列表
 
-  init: (q: string, preferredSource?: string, id?: string) => Promise<void>;
+  init: (q: string, preferredSource?: string, id?: string, year?: string) => Promise<void>;
   setDetail: (detail: SearchResultWithResolution) => Promise<void>;
   abort: () => void;
   toggleFavorite: () => Promise<void>;
@@ -41,7 +41,7 @@ const useDetailStore = create<DetailState>((set, get) => ({
   isFavorited: false,
   failedSources: new Set(),
 
-  init: async (q, preferredSource, id) => {
+  init: async (q, preferredSource, id, year) => {
     const perfStart = performance.now();
     logger.info(`[PERF] DetailStore.init START - q: ${q}, preferredSource: ${preferredSource}, id: ${id}`);
     
@@ -54,6 +54,8 @@ const useDetailStore = create<DetailState>((set, get) => ({
 
     set({
       q,
+      isFavorited: false,
+      failedSources: new Set(),
       loading: true,
       searchResults: [],
       detail: null,
@@ -65,36 +67,15 @@ const useDetailStore = create<DetailState>((set, get) => ({
     const { videoSource } = useSettingsStore.getState();
 
     const processAndSetResults = async (results: SearchResult[], merge = false) => {
-      const resolutionStart = performance.now();
-      logger.info(`[PERF] Resolution detection START - processing ${results.length} sources`);
-      
-      const resultsWithResolution = await Promise.all(
-        results.map(async (searchResult) => {
-          let resolution;
-          const m3u8Start = performance.now();
-          try {
-            if (searchResult.episodes && searchResult.episodes.length > 0) {
-              resolution = await getResolutionFromM3U8(searchResult.episodes[0], signal);
-            }
-          } catch (e) {
-            if ((e as Error).name !== "AbortError") {
-              logger.info(`Failed to get resolution for ${searchResult.source_name}`, e);
-            }
-          }
-          const m3u8End = performance.now();
-          logger.info(`[PERF] M3U8 resolution for ${searchResult.source_name}: ${(m3u8End - m3u8Start).toFixed(2)}ms (${resolution || 'failed'})`);
-          return { ...searchResult, resolution };
-        })
-      );
-      
-      const resolutionEnd = performance.now();
-      logger.info(`[PERF] Resolution detection COMPLETE - took ${(resolutionEnd - resolutionStart).toFixed(2)}ms`);
-
+      // Show playable results immediately. A slow media host must not block details.
+      const resultsWithResolution: SearchResultWithResolution[] = results
+        .filter(r => !year || r.year === year)
+        .sort((a, b) => Number(b.source === preferredSource && String(b.id) === id) - Number(a.source === preferredSource && String(a.id) === id));
       if (signal.aborted) return;
 
       set((state) => {
-        const existingSources = new Set(state.searchResults.map((r) => r.source));
-        const newResults = resultsWithResolution.filter((r) => !existingSources.has(r.source));
+        const existingSources = new Set(state.searchResults.map((r) => `${r.source}:${r.id}`));
+        const newResults = resultsWithResolution.filter((r) => !existingSources.has(`${r.source}:${r.id}`));
         const finalResults = merge ? [...state.searchResults, ...newResults] : resultsWithResolution;
 
         return {
@@ -107,6 +88,15 @@ const useDetailStore = create<DetailState>((set, get) => ({
           detail: state.detail ?? finalResults[0] ?? null,
         };
       });
+      void Promise.all(resultsWithResolution.map(async result => {
+        if (!result.episodes?.length) return;
+        const resolution = await getResolutionFromM3U8(result.episodes[0], signal).catch(() => null);
+        if (signal.aborted) return;
+        set(state => ({
+          searchResults: state.searchResults.map(r => r.source === result.source && r.id === result.id ? { ...r, resolution } : r),
+        }));
+      }));
+
     };
 
     try {
@@ -246,6 +236,7 @@ const useDetailStore = create<DetailState>((set, get) => ({
           });
 
           await Promise.all(searchPromises);
+          if (signal.aborted) return;
           
           // 检查是否找到任何结果
           if (totalResults === 0) {
@@ -267,6 +258,7 @@ const useDetailStore = create<DetailState>((set, get) => ({
         }
       }
 
+      if (signal.aborted) return;
       const favoriteCheckStart = performance.now();
       const finalState = get();
       
@@ -283,7 +275,7 @@ const useDetailStore = create<DetailState>((set, get) => ({
         logger.info(`[INFO] Checking favorite status for source: ${source}, id: ${id}`);
         try {
           const isFavorited = await FavoriteManager.isFavorited(source, id.toString());
-          set({ isFavorited });
+          if (!signal.aborted) set({ isFavorited });
           logger.info(`[INFO] Favorite status: ${isFavorited}`);
         } catch (favoriteError) {
           logger.warn(`[WARN] Failed to check favorite status:`, favoriteError);
@@ -296,7 +288,7 @@ const useDetailStore = create<DetailState>((set, get) => ({
       logger.info(`[PERF] Favorite check took ${(favoriteCheckEnd - favoriteCheckStart).toFixed(2)}ms`);
       
     } catch (e) {
-      if ((e as Error).name !== "AbortError") {
+      if (!signal.aborted && (e as Error).name !== "AbortError") {
         logger.error(`[ERROR] DetailStore.init caught unexpected error:`, e);
         const errorMessage = e instanceof Error ? e.message : "获取数据失败";
         set({ error: `搜索失败：${errorMessage}` });
@@ -318,7 +310,7 @@ const useDetailStore = create<DetailState>((set, get) => ({
     set({ detail });
     const { source, id } = detail;
     const isFavorited = await FavoriteManager.isFavorited(source, id.toString());
-    set({ isFavorited });
+    if (get().detail === detail) set({ isFavorited });
   },
 
   abort: () => {
@@ -406,4 +398,4 @@ const useDetailStore = create<DetailState>((set, get) => ({
 export const sourcesSelector = (state: DetailState) => state.sources;
 export default useDetailStore;
 export const episodesSelectorBySource = (source: string) => (state: DetailState) =>
-  state.searchResults.find((r) => r.source === source)?.episodes || [];
+  (state.detail?.source === source ? state.detail.episodes : state.searchResults.find((r) => r.source === source)?.episodes) || [];

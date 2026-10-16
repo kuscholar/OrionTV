@@ -10,6 +10,7 @@ const logger = Logger.withTag('AuthStore');
 
 interface AuthState {
   isLoggedIn: boolean;
+  authenticatedBaseUrl: string | null;
   isLoginModalVisible: boolean;
   showLoginModal: () => void;
   hideLoginModal: () => void;
@@ -24,6 +25,7 @@ let restorePromise: Promise<void> | null = null;
 
 const useAuthStore = create<AuthState>((set, get) => ({
   isLoggedIn: false,
+  authenticatedBaseUrl: null,
   isLoginModalVisible: false,
   showLoginModal: () => set({ isLoginModalVisible: true }),
   hideLoginModal: () => set({ isLoginModalVisible: false }),
@@ -62,14 +64,20 @@ const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      if (get().isLoggedIn && get().authenticatedBaseUrl === apiBaseUrl) return;
       const authToken = await AsyncStorage.getItem('authCookies');
       if (!authToken || authToken.trim() === '') {
+        const saved = await LoginCredentialsManager.get();
+        if (saved?.password || saved?.username) {
+          await get().restoreSession();
+          return;
+        }
         if (serverConfig && serverConfig.StorageType === "localstorage") {
           const loginResult = await api.login().catch(() => {
             set({ isLoggedIn: false, isLoginModalVisible: true });
           });
           if (loginResult && loginResult.ok) {
-            set({ isLoggedIn: true });
+            set({ isLoggedIn: true, isLoginModalVisible: false, authenticatedBaseUrl: api.baseURL });
           }
         } else {
           // 非 localstorage：需要账号密码。优先用已保存凭据自动重新登录，
@@ -77,7 +85,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
           await get().restoreSession();
         }
       } else {
-        set({ isLoggedIn: true, isLoginModalVisible: false });
+        set({ isLoggedIn: true, isLoginModalVisible: false, authenticatedBaseUrl: api.baseURL });
       }
     } catch (error) {
       logger.error("Failed to check login status:", error);
@@ -94,16 +102,16 @@ const useAuthStore = create<AuthState>((set, get) => ({
     if (!restorePromise) {
       restorePromise = (async () => {
         const creds = await LoginCredentialsManager.get();
-        if (!creds || !creds.username) {
+        if (!creds || (!creds.username && !creds.password)) {
           // 无可用凭据，需要用户手动登录。
           set({ isLoggedIn: false, isLoginModalVisible: true });
           return;
         }
         try {
           // 用保存的用户名/密码自动登录，服务器会在成功时刷新 authCookies。
-          const result = await api.login(creds.username, creds.password);
+          const result = await api.login(creds.username || undefined, creds.password);
           if (result && result.ok) {
-            set({ isLoggedIn: true, isLoginModalVisible: false });
+            set({ isLoggedIn: true, isLoginModalVisible: false, authenticatedBaseUrl: api.baseURL });
           } else {
             throw new Error("UNAUTHORIZED");
           }

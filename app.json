@@ -20,7 +20,8 @@
         "expo-build-properties",
         {
           "ios": {
-            "newArchEnabled": false
+            "newArchEnabled": false,
+            "deploymentTarget": "15.0"
           },
           "android": {
             "newArchEnabled": false,
@@ -29,7 +30,8 @@
           }
         }
       ],
-      "expo-router"
+      "expo-router",
+      "./plugins/withTVSceneLifecycle"
     ],
     "experiments": {
       "typedRoutes": true
@@ -70,7 +72,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.oriontv",
+      "bundleIdentifier": "com.kuschtv.OrionTV",
       "supportsTablet": true,
       "requireFullScreen": false,
       "supportedInterfaceOrientations": [
@@ -81,16 +83,21 @@
       ],
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "appleTeamId": "D7KZKWD692",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "连接家里的 MoonTV 服务器并提供遥控输入。",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "scheme": "oriontv",
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "b4eddfdb-08cb-4ffc-828d-a27f493e10f7"
       }
-    }
+    },
+    "version": "1.3.14"
   }
 }

@@ -1,3 +1,5 @@
+import TVDetail from "@/components/tv/TVDetail";
+import { Platform as TVPlatform } from "react-native";
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,7 +14,9 @@ import { getCommonResponsiveStyles } from "@/utils/ResponsiveStyles";
 import ResponsiveNavigation from "@/components/navigation/ResponsiveNavigation";
 import ResponsiveHeader from "@/components/navigation/ResponsiveHeader";
 
-export default function DetailScreen() {
+export default function DetailScreen() { return TVPlatform.isTV ? <TVDetail /> : <OriginalDetailScreen />; }
+
+function OriginalDetailScreen() {
   const { q, source, id } = useLocalSearchParams<{ q: string; source?: string; id?: string }>();
   const router = useRouter();
 

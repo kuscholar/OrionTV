@@ -1,3 +1,5 @@
+import TVSearch from "@/components/tv/TVSearch";
+import { Platform as TVPlatform } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 import { View, TextInput, StyleSheet, Alert, Keyboard, TouchableOpacity } from "react-native";
 import { ThemedView } from "@/components/ThemedView";
@@ -22,7 +24,9 @@ import Logger from '@/utils/Logger';
 
 const logger = Logger.withTag('SearchScreen');
 
-export default function SearchScreen() {
+export default function SearchScreen() { return TVPlatform.isTV ? <TVSearch /> : <OriginalSearchScreen />; }
+
+function OriginalSearchScreen() {
   const [keyword, setKeyword] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);

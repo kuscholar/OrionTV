@@ -1,3 +1,5 @@
+import TVFavorites from "@/components/tv/TVFavorites";
+import { Platform as TVPlatform } from "react-native";
 import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { ThemedView } from "@/components/ThemedView";
@@ -12,7 +14,9 @@ import { getCommonResponsiveStyles } from "@/utils/ResponsiveStyles";
 import ResponsiveNavigation from "@/components/navigation/ResponsiveNavigation";
 import ResponsiveHeader from "@/components/navigation/ResponsiveHeader";
 
-export default function FavoritesScreen() {
+export default function FavoritesScreen() { return TVPlatform.isTV ? <TVFavorites /> : <OriginalFavoritesScreen />; }
+
+function OriginalFavoritesScreen() {
   const { favorites, loading, error, fetchFavorites } = useFavoritesStore();
 
   // 响应式布局配置
