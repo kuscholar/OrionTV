@@ -18,7 +18,7 @@ function Result({ group }: { group: ReturnType<typeof groupResults>[number] }) {
       onPress={() =>
         router.push({ pathname: "/detail", params: { q: f.title, source: f.source, id: String(f.id), year: f.year } })
       }
-      style={{
+      style={() => ({
         width: px(552),
         minHeight: px(200),
         padding: px(16),
@@ -28,7 +28,7 @@ function Result({ group }: { group: ReturnType<typeof groupResults>[number] }) {
         backgroundColor: focused ? "#303947" : palette.panel,
         flexDirection: "row",
         gap: px(22),
-      }}
+      })}
     >
       <Poster uri={f.poster} style={{ width: px(108), height: px(155), borderRadius: px(8) }} />
       <View style={{ flex: 1, justifyContent: "center", gap: px(12) }}>

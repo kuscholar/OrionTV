@@ -118,14 +118,12 @@ export default function TVHome() {
   };
   return (
     <TVShell active="首页">
-      <TVFocusGuideView
-        autoFocus
-        trapFocusLeft
-        trapFocusRight
+      <View
         style={{ flexDirection: "row", gap: px(12), paddingHorizontal: px(52), paddingBottom: px(12) }}
       >
         {channels.map((c, i) => (
           <TVButton
+            toHeader
             key={c.name}
             label={c.name}
             selected={channel === i}
@@ -135,8 +133,8 @@ export default function TVHome() {
             }}
           />
         ))}
-        <TVButton label="直播" onPress={() => router.push("/live")} />
-      </TVFocusGuideView>
+        <TVButton toHeader label="直播" onPress={() => router.push("/live")} />
+      </View>
       {channel > 0 && (
         <ScrollView
           horizontal

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, Pressable, Image, StyleSheet, Dimensions, ScrollView, TVFocusGuideView } from "react-native";
+import React, { useState, useRef, useContext, createContext } from "react";
+import { View, Text, Pressable, Image, StyleSheet, Dimensions, ScrollView, TVFocusGuideView, findNodeHandle } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { api } from "@/services/api";
@@ -7,6 +7,11 @@ import { api } from "@/services/api";
 export const unit = Dimensions.get("window").width / 1280;
 export const px = (n: number) => n * unit;
 export const palette = { bg: "#101319", panel: "#1d222b", muted: "#a2aab8", white: "#f5f6f8", accent: "#ff934f" };
+const NavigationContext = createContext<{
+  headerTarget?: number; returnTarget?: number;
+  setHeaderTarget: (tag: number) => void; setReturnTarget: (tag: number) => void;
+}>({ setHeaderTarget: () => {}, setReturnTarget: () => {} });
+
 export function TVButton({
   label,
   onPress,
@@ -14,6 +19,9 @@ export function TVButton({
   preferred = false,
   style,
   onFocus,
+  toHeader = false,
+  header = false,
+  headerEntry = false,
 }: {
   label: string;
   onPress: () => void;
@@ -21,10 +29,22 @@ export function TVButton({
   preferred?: boolean;
   style?: any;
   onFocus?: () => void;
+  toHeader?: boolean;
+  header?: boolean;
+  headerEntry?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
+  const buttonRef = useRef<View>(null);
+  const nav = useContext(NavigationContext);
   return (
     <Pressable
+      ref={buttonRef}
+      onLayout={() => {
+        const tag = findNodeHandle(buttonRef.current);
+        if (headerEntry && tag != null) nav.setHeaderTarget(tag);
+      }}
+      nextFocusUp={toHeader ? nav.headerTarget : undefined}
+      nextFocusDown={header ? nav.returnTarget : undefined}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
@@ -32,10 +52,12 @@ export function TVButton({
       onPress={onPress}
       onFocus={() => {
         setFocused(true);
+        const tag = findNodeHandle(buttonRef.current);
+        if (toHeader && tag != null) nav.setReturnTarget(tag);
         onFocus?.();
       }}
       onBlur={() => setFocused(false)}
-      style={[k.button, selected && k.selected, style, focused && k.focus]}
+      style={() => [k.button, selected && k.selected, style, focused && k.focus]}
     >
       <Text style={[k.buttonText, selected && { color: palette.accent }, focused && { color: "#101319" }]}>
         {label}
@@ -45,9 +67,12 @@ export function TVButton({
 }
 export function TVShell({ children, active = "" }: { children: React.ReactNode; active?: string }) {
   const router = useRouter();
+  const [headerTarget, setHeaderTarget] = useState<number>();
+  const [returnTarget, setReturnTarget] = useState<number>();
   return (
+    <NavigationContext.Provider value={{headerTarget, returnTarget, setHeaderTarget, setReturnTarget}}>
     <View style={k.screen}>
-      <TVFocusGuideView autoFocus trapFocusUp trapFocusLeft trapFocusRight style={k.header}>
+      <View style={k.header}>
         <View style={k.brand}>
           <Text style={k.mark}>O</Text>
           <Text style={k.brandText}>
@@ -64,15 +89,18 @@ export function TVShell({ children, active = "" }: { children: React.ReactNode; 
           ].map(([label, path]) => (
             <TVButton
               key={label}
+              header
+              headerEntry={label === "首页"}
               label={label}
               selected={label === active}
               onPress={() => label !== active && router.push(path as any)}
             />
           ))}
         </View>
-      </TVFocusGuideView>
-      <TVFocusGuideView autoFocus style={{ flex: 1 }}>{children}</TVFocusGuideView>
+      </View>
+      <View style={{ flex: 1 }}>{children}</View>
     </View>
+    </NavigationContext.Provider>
   );
 }
 export function Poster({ uri, style }: { uri?: string; style?: any }) {
@@ -136,7 +164,7 @@ export function TVPoster({ film, onFocus }: { film: Film; onFocus?: () => void }
         onFocus?.();
       }}
       onBlur={() => setFocused(false)}
-      style={[k.card, focused && k.cardFocus]}
+      style={() => [k.card, focused && k.cardFocus]}
     >
       <Poster uri={film.poster} style={k.poster} />
       {film.rate && (
