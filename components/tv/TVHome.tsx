@@ -120,6 +120,8 @@ export default function TVHome() {
     <TVShell active="首页">
       <TVFocusGuideView
         autoFocus
+        trapFocusLeft
+        trapFocusRight
         style={{ flexDirection: "row", gap: px(12), paddingHorizontal: px(52), paddingBottom: px(12) }}
       >
         {channels.map((c, i) => (
@@ -152,7 +154,7 @@ export default function TVHome() {
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: px(60) }}>
           {channel === 0 && <Hero film={items[0]} />}
-          {!!error && <Message text={error} action="重试" onPress={() => setRetry((n) => n + 1)} />}
+          {!!error && <View><Message text={error} action="重试" onPress={() => setRetry((n) => n + 1)} /><View style={{alignItems: "center", marginBottom: px(24)}}><TVButton label="服务器设置" onPress={() => router.push("/settings")} /></View></View>}
           {channel === 0 ? (
             <>
               <Rail title="继续观看" items={records} />

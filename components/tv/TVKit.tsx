@@ -47,7 +47,7 @@ export function TVShell({ children, active = "" }: { children: React.ReactNode; 
   const router = useRouter();
   return (
     <View style={k.screen}>
-      <View style={k.header}>
+      <TVFocusGuideView autoFocus trapFocusUp trapFocusLeft trapFocusRight style={k.header}>
         <View style={k.brand}>
           <Text style={k.mark}>O</Text>
           <Text style={k.brandText}>
@@ -55,7 +55,7 @@ export function TVShell({ children, active = "" }: { children: React.ReactNode; 
           </Text>
         </View>
         <View style={{ flex: 1 }} />
-        <TVFocusGuideView autoFocus style={k.nav}>
+        <View style={k.nav}>
           {[
             ["首页", "/"],
             ["搜索", "/search"],
@@ -69,9 +69,9 @@ export function TVShell({ children, active = "" }: { children: React.ReactNode; 
               onPress={() => label !== active && router.push(path as any)}
             />
           ))}
-        </TVFocusGuideView>
-      </View>
-      {children}
+        </View>
+      </TVFocusGuideView>
+      <TVFocusGuideView autoFocus style={{ flex: 1 }}>{children}</TVFocusGuideView>
     </View>
   );
 }
