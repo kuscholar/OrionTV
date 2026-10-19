@@ -12,7 +12,7 @@ const CONTROLS_TIMEOUT = 5000;
  * @returns onScreenPress - 一个函数，用于处理屏幕点击事件，以显示控件并重置定时器。
  */
 export const useTVRemoteHandler = () => {
-  const { showControls, setShowControls, showEpisodeModal, togglePlayPause, seek } = usePlayerStore();
+  const { showControls, setShowControls, showEpisodeModal, showSourceModal, showSpeedModal, togglePlayPause, seek } = usePlayerStore();
 
   const controlsTimer = useRef<NodeJS.Timeout | null>(null);
   const fastForwardIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,7 +31,7 @@ export const useTVRemoteHandler = () => {
 
   // 当控件显示时，启动定时器
   useEffect(() => {
-    if (showControls) {
+    if (showControls && !showEpisodeModal && !showSourceModal && !showSpeedModal) {
       resetTimer();
     } else {
       // 如果控件被隐藏，清除定时器
@@ -46,7 +46,7 @@ export const useTVRemoteHandler = () => {
         clearTimeout(controlsTimer.current);
       }
     };
-  }, [showControls, resetTimer]);
+  }, [showControls, showEpisodeModal, showSourceModal, showSpeedModal, resetTimer]);
 
   // 组件卸载时清除快进定时器
   useEffect(() => {
@@ -60,7 +60,7 @@ export const useTVRemoteHandler = () => {
   // 处理遥控器事件
   const handleTVEvent = useCallback(
     (event: HWEvent) => {
-      if (showEpisodeModal) {
+      if (showEpisodeModal || showSourceModal || showSpeedModal) {
         return;
       }
 
@@ -75,6 +75,11 @@ export const useTVRemoteHandler = () => {
 
       resetTimer();
 
+      if (event.eventType === "playPause") {
+        if (event.eventKeyAction !== 0) togglePlayPause();
+        return;
+      }
+
       if (showControls) {
         // 如果控制条已显示，则不处理后台的快进/快退等操作
         // 避免与控制条上的按钮焦点冲突
@@ -83,7 +88,6 @@ export const useTVRemoteHandler = () => {
 
       switch (event.eventType) {
         case "select":
-          togglePlayPause();
           setShowControls(true);
           break;
         case "left":
@@ -112,7 +116,7 @@ export const useTVRemoteHandler = () => {
           break;
       }
     },
-    [showControls, showEpisodeModal, setShowControls, resetTimer, togglePlayPause, seek]
+    [showControls, showEpisodeModal, showSourceModal, showSpeedModal, setShowControls, resetTimer, togglePlayPause, seek]
   );
 
   useTVEventHandler(handleTVEvent);

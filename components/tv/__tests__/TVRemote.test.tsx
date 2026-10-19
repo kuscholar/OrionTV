@@ -39,3 +39,13 @@ test('category Up points to the header and header Down returns to the focused ca
  for(const label of ['首页','搜索','收藏','设置']) expect(button(label).props.nextFocusDown).toBe(200);
  act(()=>tree!.unmount());nativeHandle.mockRestore();
 });
+
+jest.mock('@/hooks/useResponsiveLayout',()=>({useResponsiveLayout:()=>({deviceType:'tv'})}));
+jest.mock('@/hooks/useAnimation',()=>({useButtonAnimation:()=>({})}));
+test('player media button responds to remote focus and confirmation',()=>{
+ const {MediaButton}=require('../../MediaButton');const {Text}=require('react-native');
+ const onPress=jest.fn();let tree:renderer.ReactTestRenderer;
+ act(()=>{tree=renderer.create(<MediaButton accessibilityLabel="从头播放" onPress={onPress}><Text>从头播放</Text></MediaButton>);});
+ remote('focus');remote('select');expect(onPress).toHaveBeenCalledTimes(1);
+ act(()=>tree!.unmount());
+});

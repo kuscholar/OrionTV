@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { Pause, Play, SkipForward, List, Tv, ArrowDownToDot, ArrowUpFromDot, Gauge } from "lucide-react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Pause, Play, SkipForward, List, Tv, ArrowDownToDot, ArrowUpFromDot, Gauge, RotateCcw } from "lucide-react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { MediaButton } from "@/components/MediaButton";
 
@@ -23,6 +23,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({ showControls, se
     progressPosition,
     playbackRate,
     togglePlayPause,
+    restartPlayback,
     playEpisode,
     setShowEpisodeModal,
     setShowSourceModal,
@@ -77,7 +78,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({ showControls, se
               },
             ]}
           />
-          <Pressable style={styles.progressBarTouchable} />
+
         </View>
 
         <ThemedText style={{ color: "white", marginTop: 5 }}>
@@ -91,7 +92,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({ showControls, se
             <ArrowDownToDot color="white" size={24} />
           </MediaButton>
 
-          <MediaButton onPress={togglePlayPause} hasTVPreferredFocus={showControls}>
+          <MediaButton accessibilityLabel="播放或暂停" onPress={togglePlayPause} hasTVPreferredFocus={showControls}>
             {status?.isLoaded && status.isPlaying ? (
               <Pause color="white" size={24} />
             ) : (
@@ -99,7 +100,12 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({ showControls, se
             )}
           </MediaButton>
 
-          <MediaButton onPress={onPlayNextEpisode} disabled={!hasNextEpisode}>
+          <MediaButton accessibilityLabel="从头播放" onPress={restartPlayback} disabled={!status?.isLoaded}>
+            <RotateCcw color="white" size={24} />
+            <Text style={{color: "white", marginLeft: 8}}>从头播放</Text>
+          </MediaButton>
+
+          <MediaButton accessibilityLabel="下一集" onPress={onPlayNextEpisode} disabled={!hasNextEpisode}>
             <SkipForward color={hasNextEpisode ? "white" : "#666"} size={24} />
           </MediaButton>
 
@@ -107,15 +113,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({ showControls, se
             <ArrowUpFromDot color="white" size={24} />
           </MediaButton>
 
-          <MediaButton onPress={() => setShowEpisodeModal(true)}>
+          <MediaButton accessibilityLabel="选集" onPress={() => setShowEpisodeModal(true)}>
             <List color="white" size={24} />
           </MediaButton>
 
-          <MediaButton onPress={() => setShowSpeedModal(true)} timeLabel={playbackRate !== 1.0 ? `${playbackRate}x` : undefined}>
+          <MediaButton accessibilityLabel="播放速度" onPress={() => setShowSpeedModal(true)} timeLabel={playbackRate !== 1.0 ? `${playbackRate}x` : undefined}>
             <Gauge color="white" size={24} />
           </MediaButton>
 
-          <MediaButton onPress={() => setShowSourceModal(true)}>
+          <MediaButton accessibilityLabel="切换片源" onPress={() => setShowSourceModal(true)}>
             <Tv color="white" size={24} />
           </MediaButton>
         </View>

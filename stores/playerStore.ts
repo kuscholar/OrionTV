@@ -41,6 +41,7 @@ interface PlayerState {
   }) => Promise<void>;
   playEpisode: (index: number) => void;
   togglePlayPause: () => void;
+  restartPlayback: () => Promise<void>;
   seek: (duration: number) => void;
   handlePlaybackStatusUpdate: (newStatus: AVPlaybackStatus) => void;
   setLoading: (loading: boolean) => void;
@@ -253,6 +254,22 @@ const usePlayerStore = create<PlayerState>((set, get) => ({
         logger.debug("Failed to replay video:", error);
         Toast.show({ type: "error", text1: "播放失败" });
       }
+    }
+  },
+
+  restartPlayback: async () => {
+    const { videoRef, status, _seekTimeout, currentEpisodeIndex } = get();
+    if (!status?.isLoaded || !videoRef?.current) return;
+    try {
+      const restarted = await videoRef.current.replayAsync({ positionMillis: 0, shouldPlay: true });
+      if (get().videoRef !== videoRef || get().currentEpisodeIndex !== currentEpisodeIndex) return;
+      if (_seekTimeout) clearTimeout(_seekTimeout);
+      set({ status: restarted, initialPosition: 0, progressPosition: 0, seekPosition: 0,
+        isSeeking: false, _seekTimeout: undefined, showNextEpisodeOverlay: false, showControls: false });
+      get()._savePlayRecord({ play_time: 0 }, { immediate: true });
+    } catch (error) {
+      logger.debug("Failed to restart playback:", error);
+      Toast.show({ type: "error", text1: "从头播放失败，请重试" });
     }
   },
 

@@ -214,18 +214,17 @@ export default function PlayScreen() {
   }
 
   return (
-    <ThemedView focusable style={dynamicStyles.container}>
-      <TouchableOpacity
-        activeOpacity={1}
-        style={dynamicStyles.videoContainer}
-        onPress={onScreenPress}
-        disabled={deviceType !== "tv" && showControls} // 移动端和平板端在显示控制条时禁用触摸
-      >
+    <ThemedView style={dynamicStyles.container}>
+      <View style={dynamicStyles.videoContainer}>
         {/* 条件渲染Video组件：只有在有有效URL时才渲染 */}
         {currentEpisode?.url ? (
           <Video ref={videoRef} style={dynamicStyles.videoPlayer} {...videoProps} />
         ) : (
           <LoadingContainer style={dynamicStyles.loadingContainer} currentEpisode={currentEpisode} />
+        )}
+
+        {deviceType !== "tv" && (
+          <TouchableOpacity accessible={false} activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onScreenPress} />
         )}
 
         {showControls && deviceType === "tv" && (
@@ -236,13 +235,13 @@ export default function PlayScreen() {
 
         {/* 只在Video组件存在且正在加载时显示加载动画覆盖层 */}
         {currentEpisode?.url && isLoading && (
-          <View style={dynamicStyles.loadingContainer}>
+          <View pointerEvents="none" style={dynamicStyles.loadingContainer}>
             <VideoLoadingAnimation showProgressBar />
           </View>
         )}
 
         {/* <NextEpisodeOverlay visible={showNextEpisodeOverlay} onCancel={() => setShowNextEpisodeOverlay(false)} /> */}
-      </TouchableOpacity>
+      </View>
 
       <EpisodeSelectionModal />
       <SourceSelectionModal />
