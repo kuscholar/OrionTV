@@ -1,6 +1,6 @@
-import React, { useState, useRef, useContext, createContext } from "react";
-import { View, Text, Pressable, Image, StyleSheet, Dimensions, ScrollView, TVFocusGuideView, findNodeHandle } from "react-native";
-import { useRouter } from "expo-router";
+import React, { useState, useRef, useContext, createContext, useCallback } from "react";
+import { View, Text, Pressable, Image, StyleSheet, Dimensions, ScrollView, TVFocusGuideView, findNodeHandle, useTVEventHandler } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { api } from "@/services/api";
 
@@ -9,8 +9,10 @@ export const px = (n: number) => n * unit;
 export const palette = { bg: "#101319", panel: "#1d222b", muted: "#a2aab8", white: "#f5f6f8", accent: "#ff934f" };
 const NavigationContext = createContext<{
   headerTarget?: number; returnTarget?: number;
+  registerTarget: (region: "header" | "category", view: View | null) => void;
+  focused: (region: "header" | "category" | "content", view?: View | null) => void;
   setHeaderTarget: (tag: number) => void; setReturnTarget: (tag: number) => void;
-}>({ setHeaderTarget: () => {}, setReturnTarget: () => {} });
+}>({ registerTarget: () => {}, focused: () => {}, setHeaderTarget: () => {}, setReturnTarget: () => {} });
 
 export function TVButton({
   label,
@@ -42,6 +44,8 @@ export function TVButton({
       onLayout={() => {
         const tag = findNodeHandle(buttonRef.current);
         if (headerEntry && tag != null) nav.setHeaderTarget(tag);
+        if (headerEntry) nav.registerTarget("header", buttonRef.current);
+        if (toHeader && selected) nav.registerTarget("category", buttonRef.current);
       }}
       nextFocusUp={toHeader ? nav.headerTarget : undefined}
       nextFocusDown={header ? nav.returnTarget : undefined}
@@ -52,6 +56,7 @@ export function TVButton({
       onPress={onPress}
       onFocus={() => {
         setFocused(true);
+        nav.focused(header ? "header" : toHeader ? "category" : "content", buttonRef.current);
         const tag = findNodeHandle(buttonRef.current);
         if (toHeader && tag != null) nav.setReturnTarget(tag);
         onFocus?.();
@@ -69,8 +74,33 @@ export function TVShell({ children, active = "" }: { children: React.ReactNode; 
   const router = useRouter();
   const [headerTarget, setHeaderTarget] = useState<number>();
   const [returnTarget, setReturnTarget] = useState<number>();
+  const routeActive = useRef(false);
+  const region = useRef<"header" | "category" | "content">("content");
+  const targets = useRef<{ header?: View; category?: View }>({});
+  useFocusEffect(useCallback(() => {
+    routeActive.current = true;
+    return () => { routeActive.current = false; };
+  }, []));
+  useTVEventHandler(useCallback((event) => {
+    if (!routeActive.current || active !== "首页") return;
+    // tvOS tap recognizers report on release. Do not also handle key-down,
+    // otherwise one press can advance two levels. Long Up goes straight home.
+    const tapUp = event.eventType === "up" && event.eventKeyAction !== 0;
+    const holdUp = event.eventType === "longUp" && event.eventKeyAction === 0;
+    if ((!tapUp && !holdUp) || region.current === "header") return;
+    const destination = holdUp || region.current === "category" ? "header" : "category";
+    const target = targets.current[destination] ?? targets.current.header;
+    target?.requestTVFocus();
+  }, [active]));
+  const registerTarget = useCallback((name: "header" | "category", view: View | null) => {
+    if (view) targets.current[name] = view;
+  }, []);
+  const focused = useCallback((name: "header" | "category" | "content", view?: View | null) => {
+    region.current = name;
+    if (name === "category" && view) targets.current.category = view;
+  }, []);
   return (
-    <NavigationContext.Provider value={{headerTarget, returnTarget, setHeaderTarget, setReturnTarget}}>
+    <NavigationContext.Provider value={{headerTarget, returnTarget, setHeaderTarget, setReturnTarget, registerTarget, focused}}>
     <View style={k.screen}>
       <View style={k.header}>
         <View style={k.brand}>
@@ -153,6 +183,7 @@ export function openFilm(router: ReturnType<typeof useRouter>, film: Film) {
 }
 export function TVPoster({ film, onFocus }: { film: Film; onFocus?: () => void }) {
   const router = useRouter();
+  const nav = useContext(NavigationContext);
   const [focused, setFocused] = useState(false);
   return (
     <Pressable
@@ -161,6 +192,7 @@ export function TVPoster({ film, onFocus }: { film: Film; onFocus?: () => void }
       onPress={() => openFilm(router, film)}
       onFocus={() => {
         setFocused(true);
+        nav.focused("content");
         onFocus?.();
       }}
       onBlur={() => setFocused(false)}
