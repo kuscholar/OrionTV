@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>ORIONTV_FORCE_PROFILE_REFRESH</key>
+		<string>1</string>
+		<key>ORIONTV_SCHEDULED</key>
+		<string>1</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.kusch.refresh-orion-tv</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/kuschqin/Downloads/GitHub/FunProjects/OrionTV/scripts/refresh-orion-tv.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/kuschqin/Library/Application Support/OrionTV/daily-build/logs/launchd.err.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/kuschqin/Library/Application Support/OrionTV/daily-build/logs/launchd.out.log</string>
+	<key>StartCalendarInterval</key>
+	<array>
+		<dict>
+			<key>Hour</key>
+			<integer>10</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>14</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+		<dict>
+			<key>Hour</key>
+			<integer>18</integer>
+			<key>Minute</key>
+			<integer>30</integer>
+		</dict>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Users/kuschqin/Downloads/GitHub/FunProjects/OrionTV</string>
+</dict>
+</plist>
