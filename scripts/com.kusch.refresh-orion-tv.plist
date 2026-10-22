@@ -15,7 +15,7 @@
 	<string>com.kusch.refresh-orion-tv</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/kuschqin/Downloads/GitHub/FunProjects/OrionTV/scripts/refresh-orion-tv.sh</string>
+		<string>/Users/kuschqin/Library/Application Support/OrionTV/source/OrionTV/scripts/refresh-orion-tv.sh</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
@@ -45,6 +45,6 @@
 		</dict>
 	</array>
 	<key>WorkingDirectory</key>
-	<string>/Users/kuschqin/Downloads/GitHub/FunProjects/OrionTV</string>
+	<string>/Users/kuschqin/Library/Application Support/OrionTV/source/OrionTV</string>
 </dict>
 </plist>
