@@ -202,6 +202,18 @@ if [[ "$input_digest" != "$previous_digest" || ! -d node_modules || ! -d ios/Ori
   printf '%s\n' "$input_digest" > "${STATE_DIR}/native-input-digest"
 fi
 
+# SDK 51 does not persist appleTeamId for this tvOS-generated project. Set it
+# on the generated project too, so Xcode's GUI provisioning can renew profiles.
+SIGNING_TEAM="$SIGNING_TEAM" node <<'NODE'
+const fs = require('fs');
+const xcode = require('xcode');
+const file = 'ios/OrionTV.xcodeproj/project.pbxproj';
+const project = xcode.project(file).parseSync();
+project.addBuildProperty('DEVELOPMENT_TEAM', process.env.SIGNING_TEAM);
+project.addBuildProperty('TVOS_DEPLOYMENT_TARGET', '15.0');
+fs.writeFileSync(file, project.writeSync());
+NODE
+
 echo "[$(timestamp)] Checking OrionTV provisioning profiles"
 phase="provisioning"
 # Recover profiles left outside Xcode's directory if a previous run was interrupted.
