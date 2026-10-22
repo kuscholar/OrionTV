@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-STATE_DIR="${ORIONTV_STATE_DIR:-${HOME}/Library/Application Support/OrionTV/daily-build}"
+STATE_DIR="${ORIONTV_STATE_DIR:-${HOME}/Library/OrionTV/daily-build}"
 DERIVED_DATA="${STATE_DIR}/derived-data"
 LOG_DIR="${STATE_DIR}/logs"
 LOG_FILE="${LOG_DIR}/refresh-orion-tv.log"

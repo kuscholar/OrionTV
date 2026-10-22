@@ -15,14 +15,14 @@
 	<string>com.kusch.refresh-orion-tv</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/kuschqin/Library/Application Support/OrionTV/source/OrionTV/scripts/refresh-orion-tv.sh</string>
+		<string>/Users/kuschqin/Library/OrionTV/source/OrionTV/scripts/refresh-orion-tv.sh</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StandardErrorPath</key>
-	<string>/Users/kuschqin/Library/Application Support/OrionTV/daily-build/logs/launchd.err.log</string>
+	<string>/Users/kuschqin/Library/OrionTV/daily-build/logs/launchd.err.log</string>
 	<key>StandardOutPath</key>
-	<string>/Users/kuschqin/Library/Application Support/OrionTV/daily-build/logs/launchd.out.log</string>
+	<string>/Users/kuschqin/Library/OrionTV/daily-build/logs/launchd.out.log</string>
 	<key>StartCalendarInterval</key>
 	<array>
 		<dict>
@@ -45,6 +45,6 @@
 		</dict>
 	</array>
 	<key>WorkingDirectory</key>
-	<string>/Users/kuschqin/Library/Application Support/OrionTV/source/OrionTV</string>
+	<string>/Users/kuschqin/Library/OrionTV/source/OrionTV</string>
 </dict>
 </plist>
