@@ -1,6 +1,8 @@
 #!/bin/zsh
 set -euo pipefail
 
+# Parse the complete runner before git pull can update this script on disk.
+main() {
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 STATE_DIR="${ORIONTV_STATE_DIR:-${HOME}/Library/OrionTV/daily-build}"
 DERIVED_DATA="${STATE_DIR}/derived-data"
@@ -413,3 +415,6 @@ write_status succeeded 0
 cp "$STATUS_FILE" "${LAST_SUCCESS_STATUS_FILE}.$$"
 mv "${LAST_SUCCESS_STATUS_FILE}.$$" "$LAST_SUCCESS_STATUS_FILE"
 echo "[$(timestamp)] Refresh completed successfully"
+
+}
+main "$@"
