@@ -39,6 +39,47 @@ class RefreshTests(unittest.TestCase):
                 self.assertTrue(lock.exists())
                 self.assertIn('lock is held', (state / 'logs/refresh-orion-tv.log').read_text())
 
+    def test_real_entry_resolves_checkout_and_records_failed_runs(self):
+        # Exercise the actual entry point from an unrelated working directory.
+        # Only signing tools and git are stubbed; no Apple account is contacted.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = root / 'checkout'
+            scripts = project / 'scripts'
+            scripts.mkdir(parents=True)
+            runner = scripts / SCRIPT.name
+            runner.write_text(SOURCE)
+            state = root / 'state'
+            code = r'''xcodebuild() { return 0; }
+codesign() { return 0; }
+git() {
+  if [[ "$PWD" != "$EXPECTED_PROJECT" ]]; then
+    print -u2 "Wrong checkout: $PWD"; return 128
+  fi
+  case "$1" in
+    branch) print master ;;
+    remote) print https://github.com/kuscholar/OrionTV.git ;;
+    status) print ' M synthetic-local-edit' ;;
+    *) return 99 ;;
+  esac
+}
+source "$1"
+'''
+            result = subprocess.run(['/bin/zsh', '-c', code, 'test', str(runner)],
+                cwd=root, capture_output=True, text=True,
+                env={**os.environ, 'EXPECTED_PROJECT': str(project),
+                     'ORIONTV_STATE_DIR': str(state), 'ORIONTV_SCHEDULED': '0'})
+            log = (state / 'logs/refresh-orion-tv.log').read_text()
+            self.assertNotIn('Wrong checkout', log)
+            self.assertEqual(result.returncode, 1, result.stderr + log)
+            status = plistlib.loads((state / 'logs/last-run.plist').read_bytes())
+            self.assertEqual(status['result'], 'failed')
+            self.assertEqual(status['exitCode'], 1)
+            self.assertEqual(status['phase'], 'update-source')
+            self.assertIn('Tracked files have local edits', status['reason'])
+            self.assertFalse((state / 'refresh.lock').exists())
+            self.assertFalse((state / 'last-success-date').exists())
+
     def test_profile_requires_today_and_at_least_six_days(self):
         function = SOURCE.split('profile_is_fresh() {', 1)[1].split('\nfresh_profile_available()', 1)[0]
         now = int(datetime.datetime.now().timestamp())

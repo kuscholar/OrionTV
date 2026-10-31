@@ -1,8 +1,6 @@
 #!/bin/zsh
 set -euo pipefail
 
-# Parse the complete runner before git pull can update this script on disk.
-main() {
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 STATE_DIR="${ORIONTV_STATE_DIR:-${HOME}/Library/OrionTV/daily-build}"
 DERIVED_DATA="${STATE_DIR}/derived-data"
@@ -137,6 +135,10 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# Resolve $0 and install the EXIT trap at script scope, as in BilibiliLive.
+# In zsh a function changes $0, and a function-local EXIT trap loses the exit
+# status. Parse only the remaining work into main before git pull updates it.
+main() {
 if ! xcodebuild -checkFirstLaunchStatus; then
   failure_reason="Xcode requires first-launch components. Open Xcode and complete installation."
   exit 1
