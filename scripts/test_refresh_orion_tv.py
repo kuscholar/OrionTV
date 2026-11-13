@@ -9,11 +9,15 @@ import unittest
 
 SCRIPT = Path(__file__).with_name('refresh-orion-tv.sh')
 SOURCE = SCRIPT.read_text()
+STORAGE_STUB = r'''diskutil() {
+  print '<?xml version="1.0"?><plist version="1.0"><dict><key>VolumeUUID</key><string>580CADCD-33F5-4D78-9530-2287615873CA</string></dict></plist>'
+}
+''' 
 
 
 class RefreshTests(unittest.TestCase):
     def run_script(self, state, **env):
-        return subprocess.run(['/bin/zsh', str(SCRIPT)], env={**os.environ,
+        return subprocess.run(['/bin/zsh', '-c', STORAGE_STUB + 'source "$1"', 'test', str(SCRIPT)], env={**os.environ,
             'ORIONTV_STATE_DIR': str(state), **env}, capture_output=True, text=True)
 
     def test_daily_success_skips_even_with_forced_renewal(self):
@@ -53,7 +57,7 @@ class RefreshTests(unittest.TestCase):
             state.mkdir()
             yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
             (state / 'last-success-date').write_text(yesterday)
-            code = r'''date() {
+            code = STORAGE_STUB + r'''date() {
   if [[ "$1" == '+%H%M' ]]; then print 1200; else command date "$@"; fi
 }
 xcodebuild() { return 0; }
@@ -120,12 +124,44 @@ write_status() {''' + functions + '\ntrap cleanup EXIT\nexit 7\n'
             self.assertFalse((state / 'lock').exists())
             self.assertFalse((state / 'last-success-date').exists())
 
+    def test_missing_external_volume_stops_before_writes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            state = Path(temp) / 'absent'
+            result = subprocess.run(['/bin/zsh', '-c',
+                'diskutil() { return 1; }; source "$1"', 'test', str(SCRIPT)],
+                capture_output=True, text=True,
+                env={**os.environ, 'ORIONTV_STATE_DIR': str(state)})
+            self.assertEqual(result.returncode, 78)
+            self.assertFalse(state.exists())
+
+    def test_profile_renewal_retries_and_waits_for_fresh_profile(self):
+        function = SOURCE.split('renew_profile() {', 1)[1].split('\nif (( matching_profile_found', 1)[0]
+        # Open is stubbed in this isolated extracted function only.
+        function = function.replace('/usr/bin/open', 'open')
+        for success, expected, opens in ((True, 0, 2), (False, 1, 3)):
+            with self.subTest(success=success):
+                code = """PROJECT_DIR=/fixture; checks=0; opens=0
+timestamp() { print test; }
+open() { (( ++opens )); }
+sleep() { :; }
+fresh_profile_available() { (( ++checks )); """ + ('(( checks == 13 ))' if success else 'return 1') + """; }
+renew_profile() {""" + function + """
+renew_profile
+result=$?
+print "RESULT=$result OPENS=$opens"
+exit "$result"
+"""
+                result = subprocess.run(['/bin/zsh', '-c', code], capture_output=True, text=True)
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertIn(f'OPENS={opens}', result.stdout)
+
     def test_schedule_forces_renewal_and_retries(self):
         agent = plistlib.loads(SCRIPT.with_name('com.kusch.refresh-orion-tv.plist').read_bytes())
         self.assertEqual(agent['StartCalendarInterval'], [{'Hour':h,'Minute':30} for h in (10,14,18)])
         self.assertEqual(agent['EnvironmentVariables']['ORIONTV_FORCE_PROFILE_REFRESH'], '1')
         self.assertEqual(agent['EnvironmentVariables']['ORIONTV_SCHEDULED'], '1')
         self.assertTrue(agent['RunAtLoad'])
+        self.assertEqual(agent['StartInterval'], 3600)
 
 
 if __name__ == '__main__':

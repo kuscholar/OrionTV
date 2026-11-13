@@ -44,6 +44,8 @@
 			<integer>30</integer>
 		</dict>
 	</array>
+	<key>StartInterval</key>
+	<integer>3600</integer>
 	<key>WorkingDirectory</key>
 	<string>/Users/kuschqin/Library/OrionTV/source/OrionTV</string>
 </dict>

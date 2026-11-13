@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 STATE_DIR="${ORIONTV_STATE_DIR:-${HOME}/Library/OrionTV/daily-build}"
-DERIVED_DATA="${STATE_DIR}/derived-data"
+DERIVED_DATA="/Volumes/easystore/Builds/OrionTV/derived-data"
 LOG_DIR="${STATE_DIR}/logs"
 LOG_FILE="${LOG_DIR}/refresh-orion-tv.log"
 BUILD_LOG="${LOG_DIR}/last-build.log"
@@ -30,7 +30,13 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 export GIT_TERMINAL_PROMPT=0
 
-mkdir -p "$LOG_DIR" "$(dirname "$DERIVED_DATA")"
+# Refuse absent/replaced storage before creating any directories.
+storage_uuid="$(diskutil info -plist /Volumes/easystore 2>/dev/null | plutil -extract VolumeUUID raw -o - - 2>/dev/null || true)"
+if [[ "$storage_uuid" != "580CADCD-33F5-4D78-9530-2287615873CA" ]]; then
+  print -u2 'OrionTV renewal deferred: the verified easystore volume is not mounted.'
+  exit 78
+fi
+mkdir -p "$LOG_DIR"
 exec >> "$LOG_FILE" 2>&1
 
 timestamp() {
@@ -215,7 +221,8 @@ const file = 'ios/OrionTV.xcodeproj/project.pbxproj';
 const project = xcode.project(file).parseSync();
 project.addBuildProperty('DEVELOPMENT_TEAM', process.env.SIGNING_TEAM);
 project.addBuildProperty('TVOS_DEPLOYMENT_TARGET', '15.0');
-fs.writeFileSync(file, project.writeSync());
+const updated = project.writeSync();
+if (fs.readFileSync(file, 'utf8') !== updated) fs.writeFileSync(file, updated);
 NODE
 
 echo "[$(timestamp)] Checking OrionTV provisioning profiles"
@@ -281,18 +288,30 @@ if [[ -d "$profiles_dir" ]]; then
   done
 fi
 
-if (( matching_profile_found == 0 || profile_refresh_pending == 1 )); then
-  echo "[$(timestamp)] Opening the OrionTV project to initialize Xcode provisioning services"
-  /usr/bin/open -gj -a Xcode "${PROJECT_DIR}/ios/OrionTV.xcworkspace" >/dev/null 2>&1 || true
-  # Xcode's signed-in GUI can provision even when xcodebuild reports No Accounts.
-  for provisioning_attempt in {1..18}; do
-    if fresh_profile_available; then
-      echo "[$(timestamp)] Fresh OrionTV provisioning profile is available"
-      break
-    fi
-    sleep 5
+renew_profile() {
+  # Open the actual signing target, as BilibiliLive does. The workspace also
+  # loads Pods and can leave the app target's signing service uninitialized.
+  for renewal_attempt in 1 2 3; do
+    echo "[$(timestamp)] Initializing Xcode profile renewal (${renewal_attempt}/3)"
+    /usr/bin/open -gj -a Xcode "${PROJECT_DIR}/ios/OrionTV.xcodeproj" || return 1
+    for provisioning_attempt in {1..12}; do
+      if fresh_profile_available; then
+        echo "[$(timestamp)] Fresh OrionTV provisioning profile is available"
+        return 0
+      fi
+      sleep 5
+    done
   done
+  return 1
+}
+
+if (( matching_profile_found == 0 || profile_refresh_pending == 1 )); then
+  if ! renew_profile; then
+    failure_reason="Xcode did not issue a fresh OrionTV profile after three attempts. Previous profiles are restored; the next scheduled retry will try again. Check Xcode Signing & Capabilities if this persists."
+    exit 1
+  fi
 fi
+mkdir -p "$(dirname "$DERIVED_DATA")"
 
 echo "[$(timestamp)] Connecting to Living Room tv"
 xcrun devicectl --timeout 45 device info details --device "$COREDEVICE_ID" >/dev/null 2>&1 || true
@@ -313,6 +332,7 @@ EXPO_TV=1 NODE_ENV=production xcodebuild \
   CODE_SIGN_IDENTITY="Apple Development" \
   CODE_SIGN_STYLE=Automatic \
   TVOS_DEPLOYMENT_TARGET=15.0 \
+  SDK_STAT_CACHE_ENABLE=NO \
   SWIFT_ENABLE_EXPLICIT_MODULES=NO \
   OTHER_CODE_SIGN_FLAGS="--keychain ${ACTIVE_SIGNING_KEYCHAIN}" \
   clean build > "$BUILD_LOG" 2>&1 &
