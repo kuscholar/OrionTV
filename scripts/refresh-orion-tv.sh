@@ -220,6 +220,15 @@ const xcode = require('xcode');
 const file = 'ios/OrionTV.xcodeproj/project.pbxproj';
 const project = xcode.project(file).parseSync();
 project.addBuildProperty('DEVELOPMENT_TEAM', process.env.SIGNING_TEAM);
+project.addBuildProperty('CODE_SIGN_STYLE', 'Automatic');
+const appTarget = project.getFirstTarget();
+const attributes = project.getFirstProject().firstProject.attributes;
+attributes.TargetAttributes ??= {};
+attributes.TargetAttributes[appTarget.uuid] ??= {};
+Object.assign(attributes.TargetAttributes[appTarget.uuid], {
+  DevelopmentTeam: process.env.SIGNING_TEAM,
+  ProvisioningStyle: 'Automatic',
+});
 project.addBuildProperty('TVOS_DEPLOYMENT_TARGET', '15.0');
 const updated = project.writeSync();
 if (fs.readFileSync(file, 'utf8') !== updated) fs.writeFileSync(file, updated);
