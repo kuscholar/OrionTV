@@ -15,7 +15,11 @@
 	<string>com.kusch.refresh-orion-tv</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/kuschqin/Library/OrionTV/source/OrionTV/scripts/refresh-orion-tv.sh</string>
+		<string>/usr/bin/open</string>
+		<string>-W</string>
+		<string>-g</string>
+		<string>-a</string>
+		<string>/Users/kuschqin/Applications/Orion TV Refresh.app</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
@@ -47,6 +51,6 @@
 	<key>StartInterval</key>
 	<integer>3600</integer>
 	<key>WorkingDirectory</key>
-	<string>/Users/kuschqin/Library/OrionTV/source/OrionTV</string>
+	<string>/Users/kuschqin</string>
 </dict>
 </plist>
