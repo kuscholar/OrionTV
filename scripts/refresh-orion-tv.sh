@@ -297,29 +297,11 @@ if [[ -d "$profiles_dir" ]]; then
   done
 fi
 
-renew_profile() {
-  # Open the actual signing target, as BilibiliLive does. The workspace also
-  # loads Pods and can leave the app target's signing service uninitialized.
-  for renewal_attempt in 1 2 3; do
-    echo "[$(timestamp)] Initializing Xcode profile renewal (${renewal_attempt}/3)"
-    /usr/bin/open -gj -a Xcode "${PROJECT_DIR}/ios/OrionTV.xcodeproj" || return 1
-    for provisioning_attempt in {1..12}; do
-      if fresh_profile_available; then
-        echo "[$(timestamp)] Fresh OrionTV provisioning profile is available"
-        return 0
-      fi
-      sleep 5
-    done
-  done
-  return 1
-}
-
-if (( matching_profile_found == 0 || profile_refresh_pending == 1 )); then
-  if ! renew_profile; then
-    failure_reason="Xcode did not issue a fresh OrionTV profile after three attempts. Previous profiles are restored; the next scheduled retry will try again. Check Xcode Signing & Capabilities if this persists."
-    exit 1
-  fi
-fi
+# Background renewal must never open Xcode documents. Opening the project
+# while its workspace is open creates modal alerts on every retry. Request
+# provisioning only through xcodebuild below; failures restore old profiles
+# and remain eligible for the next scheduled attempt.
+echo "[$(timestamp)] Requesting noninteractive provisioning through xcodebuild"
 mkdir -p "$(dirname "$DERIVED_DATA")"
 
 echo "[$(timestamp)] Connecting to Living Room tv"

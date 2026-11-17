@@ -134,26 +134,32 @@ write_status() {''' + functions + '\ntrap cleanup EXIT\nexit 7\n'
             self.assertEqual(result.returncode, 78)
             self.assertFalse(state.exists())
 
-    def test_profile_renewal_retries_and_waits_for_fresh_profile(self):
-        function = SOURCE.split('renew_profile() {', 1)[1].split('\nif (( matching_profile_found', 1)[0]
-        # Open is stubbed in this isolated extracted function only.
-        function = function.replace('/usr/bin/open', 'open')
-        for success, expected, opens in ((True, 0, 2), (False, 1, 3)):
-            with self.subTest(success=success):
-                code = """PROJECT_DIR=/fixture; checks=0; opens=0
-timestamp() { print test; }
-open() { (( ++opens )); }
-sleep() { :; }
-fresh_profile_available() { (( ++checks )); """ + ('(( checks == 13 ))' if success else 'return 1') + """; }
-renew_profile() {""" + function + """
-renew_profile
-result=$?
-print "RESULT=$result OPENS=$opens"
-exit "$result"
-"""
-                result = subprocess.run(['/bin/zsh', '-c', code], capture_output=True, text=True)
-                self.assertEqual(result.returncode, expected, result.stderr)
-                self.assertIn(f'OPENS={opens}', result.stdout)
+    def test_background_provisioning_never_opens_xcode_documents(self):
+        # Execute the production build invocation with harmless CLI stubs.
+        # A provisioning failure must stay headless and retain a nonzero exit.
+        import re
+        self.assertIsNone(re.search(r'(?m)^[ \t]*(?:/usr/bin/)?open[ \t]', SOURCE))
+        start = SOURCE.index('echo "[$(timestamp)] Connecting to Living Room tv"')
+        end = SOURCE.index('build_pid=$!', start)
+        invocation = SOURCE[start:end]
+        with tempfile.TemporaryDirectory() as temp:
+            log = Path(temp) / 'build.log'
+            code = r'''timestamp() { print test; }
+xcrun() { return 0; }
+open() { print -u2 'Unexpected GUI launch'; exit 99; }
+xcodebuild() { printf '%s\n' "$@"; return 42; }
+PROJECT_DIR=/fixture; SCHEME=OrionTV; CONFIGURATION=Release
+XCODE_DEVICE_ID=fixture; COREDEVICE_ID=fixture; DERIVED_DATA=/fixture
+SIGNING_TEAM=fixture; ACTIVE_SIGNING_KEYCHAIN=/fixture; BUILD_LOG="$1"
+''' + invocation + '\nwait "$!"\n'
+            result = subprocess.run(['/bin/zsh', '-c', code, 'test', str(log)],
+                capture_output=True, text=True)
+            self.assertEqual(result.returncode, 42, result.stderr)
+            args = log.read_text().splitlines()
+            self.assertIn('-allowProvisioningUpdates', args)
+            self.assertIn('CODE_SIGN_STYLE=Automatic', args)
+            self.assertIn('-workspace', args)
+            self.assertNotIn('Unexpected GUI launch', result.stderr)
 
     def test_schedule_forces_renewal_and_retries(self):
         agent = plistlib.loads(SCRIPT.with_name('com.kusch.refresh-orion-tv.plist').read_bytes())
