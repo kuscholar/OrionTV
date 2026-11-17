@@ -23,7 +23,7 @@ XCODE_DEVICE_ID="1a4784e2bf7f81760843a5f7a61b666ab21718f4"
 COREDEVICE_ID="4694C2CD-21D4-5005-9DCA-D93D4BE3793F"
 APP_PATH="${DERIVED_DATA}/Build/Products/Release-appletvos/OrionTV.app"
 MIN_PROFILE_VALIDITY_SECONDS=$((6 * 24 * 60 * 60))
-BUILD_TIMEOUT_SECONDS=$((20 * 60))
+BUILD_TIMEOUT_SECONDS=$((45 * 60))
 profiles_dir="/Users/kuschqin/Library/Developer/Xcode/UserData/Provisioning Profiles"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
