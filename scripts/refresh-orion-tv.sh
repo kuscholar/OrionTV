@@ -302,7 +302,11 @@ fi
 # provisioning only through xcodebuild below; failures restore old profiles
 # and remain eligible for the next scheduled attempt.
 echo "[$(timestamp)] Requesting noninteractive provisioning through xcodebuild"
-mkdir -p "$(dirname "$DERIVED_DATA")"
+phase="build-storage"
+if ! mkdir -p "$(dirname "$DERIVED_DATA")"; then
+  failure_reason="macOS denied the background task access to easystore build storage. Authorize removable-volume access through macOS Privacy & Security; no privacy settings were changed by this script."
+  exit 78
+fi
 
 echo "[$(timestamp)] Connecting to Living Room tv"
 xcrun devicectl --timeout 45 device info details --device "$COREDEVICE_ID" >/dev/null 2>&1 || true

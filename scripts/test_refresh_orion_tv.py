@@ -161,6 +161,17 @@ SIGNING_TEAM=fixture; ACTIVE_SIGNING_KEYCHAIN=/fixture; BUILD_LOG="$1"
             self.assertIn('-workspace', args)
             self.assertNotIn('Unexpected GUI launch', result.stderr)
 
+    def test_denied_build_storage_fails_explicitly_without_gui_fallback(self):
+        start = SOURCE.index('phase="build-storage"')
+        end = SOURCE.index('echo "[$(timestamp)] Connecting', start)
+        code = r'''DERIVED_DATA=/fixture/builds; failure_reason=""
+mkdir() { return 1; }
+trap 'code=$?; print -r -- "$failure_reason"; exit "$code"' EXIT
+''' + SOURCE[start:end]
+        result = subprocess.run(['/bin/zsh', '-c', code], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 78)
+        self.assertIn('macOS denied the background task access', result.stdout)
+
     def test_schedule_forces_renewal_and_retries(self):
         agent = plistlib.loads(SCRIPT.with_name('com.kusch.refresh-orion-tv.plist').read_bytes())
         self.assertEqual(agent['StartCalendarInterval'], [{'Hour':h,'Minute':30} for h in (10,14,18)])
